@@ -23,7 +23,15 @@ const BabySetup = () => {
       console.error('שגיאה בשמירה', err);
     }
   };
-  return <BabySetupForm />;
+  return (
+    <BabySetupForm
+      babyName={babyName}
+      setBabyName={setBabyName}
+      birthDate={birthDate}
+      setBirthDate={setBirthDate}
+      handleSubmit={handleSubmit}
+    />
+  );
 };
 
 export default BabySetup;
