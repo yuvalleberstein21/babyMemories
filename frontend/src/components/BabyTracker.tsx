@@ -2,6 +2,7 @@ import { Calendar, Camera, Heart, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { Loader } from './ui/Loader';
+import { useNavigate } from 'react-router-dom';
 
 const babyData = {
   name: 'ליאו',
@@ -48,7 +49,7 @@ const babyData = {
 
 const currentMonth = 3;
 const BabyTracker = () => {
-  const [isSetup, setIsSetup] = useState(true);
+  const [isSetup, setIsSetup] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // if (isLoading) return <Loader />;
