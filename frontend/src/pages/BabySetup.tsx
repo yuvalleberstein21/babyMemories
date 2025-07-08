@@ -1,6 +1,6 @@
 import BabySetupForm from '@/components/BabySetupForm';
 import { auth, db } from '@/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -14,9 +14,10 @@ const BabySetup = () => {
     if (!user) return alert('לא מחובר');
 
     try {
-      await setDoc(doc(db, 'babies', user.uid), {
+      await addDoc(collection(db, 'users', user.uid, 'babies'), {
         name: babyName,
         birthDate,
+        createdAt: serverTimestamp(),
       });
       navigate('/baby-tracker'); // מעבר לדף יומן התמונות
     } catch (err) {

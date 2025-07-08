@@ -1,23 +1,23 @@
-import { login, register } from '@/services/AuthService';
+import { register } from '@/services/AuthService';
 import { firebaseAuthErrors } from '@/utils/firebaseErrors';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
-const LoginForm = () => {
+const RegisterForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: any) => {
+  const handleRegister = async (e: any) => {
     e.preventDefault();
     setErrorMessage('');
     setIsLoading(true);
 
     try {
-      const user = await login(email, password);
-      if (user) navigate('/baby-setup');
+      const user = await register(email, password);
+      if (user) navigate('/');
     } catch (err: any) {
       const message = firebaseAuthErrors[err.code] || 'אירעה שגיאה, נסה שוב';
       setErrorMessage(message);
@@ -47,7 +47,7 @@ const LoginForm = () => {
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-800">ברוכים הבאים 👶</h2>
-          <p className="text-gray-600">התחברות ליומן התינוק שלך</p>
+          <p className="text-gray-600">הרשמה ליומן התינוק שלך</p>
         </div>
 
         <form className="space-y-4">
@@ -94,18 +94,18 @@ const LoginForm = () => {
 
           <button
             type="submit"
+            onClick={handleRegister}
             disabled={isLoading}
-            onClick={handleLogin}
             className="w-full bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
           >
-            {isLoading ? 'מתחבר...' : 'התחברות'}
+            {isLoading ? 'נרשם...' : 'הרשמה'}
           </button>
         </form>
 
         <p className="text-center text-sm text-gray-600">
-          אין לך חשבון?{' '}
-          <Link to={'/auth/register'} className="text-pink-500 hover:underline">
-            הרשם כאן
+          יש לך חשבון קיים?{' '}
+          <Link to={'/'} className="text-pink-500 hover:underline">
+            התחבר כאן
           </Link>
         </p>
       </div>
@@ -113,4 +113,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default RegisterForm;
