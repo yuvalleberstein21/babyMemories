@@ -24,6 +24,7 @@ const BabyTracker = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [isLoadingGetPhotos, setIsLoadingGetPhotos] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [photos, setPhotos] = useState<
     { id: string; imageUrl: string; note?: string; photoDate?: string }[]
@@ -34,29 +35,82 @@ const BabyTracker = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        console.log('❌ אין משתמש');
         navigate('/');
         return;
       }
 
+      console.log('✅ משתמש מחובר:', user.uid);
+
       const babiesRef = collection(db, 'users', user.uid, 'babies');
-      const snap = await getDocs(babiesRef);
+      console.log('📁 בודק path:', babiesRef.path);
 
-      if (snap.empty) {
-        navigate('/setup');
-        return;
+      try {
+        const snap = await getDocs(babiesRef);
+        console.log(
+          '📦 Found docs:',
+          snap.docs.map((doc) => doc.data())
+        );
+
+        if (snap.empty) {
+          console.log('⚠️ אין תינוקות');
+          navigate('/baby-setup');
+          return;
+        }
+
+        const babyList = snap.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as { name: string; birthDate: string }),
+        }));
+
+        console.log('👶 תינוקות:', babyList);
+        setBabies(babyList);
+        setSelectedBabyId(babyList[0].id);
+      } catch (err) {
+        console.error('שגיאה בשליפה מ־babies:', err);
       }
-
-      const babyList = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as { name: string; birthDate: string }),
-      }));
-
-      setBabies(babyList);
-      setSelectedBabyId(babyList[0].id);
     });
 
     return () => unsubscribe();
   }, [navigate]);
+
+  //   const currentUser = auth.currentUser;
+
+  //   const fetchBabies = async (user: typeof auth.currentUser) => {
+  //     const babiesRef = collection(db, 'users', user!.uid, 'babies');
+
+  //     const snap = await getDocs(babiesRef);
+
+  //     if (snap.empty) {
+  //       navigate('/baby-setup');
+  //       return;
+  //     }
+
+  //     const babyList = snap.docs.map((doc) => ({
+  //       id: doc.id,
+  //       ...(doc.data() as { name: string; birthDate: string }),
+  //     }));
+
+  //     setBabies(babyList);
+  //     setSelectedBabyId(babyList[0].id);
+  //   };
+
+  //   if (currentUser) {
+  //     console.log('👶 משתמש קיים כבר עם currentUser:', currentUser.uid);
+  //     fetchBabies(currentUser);
+  //   } else {
+  //     const unsubscribe = onAuthStateChanged(auth, (user) => {
+  //       if (!user) {
+  //         navigate('/');
+  //         return;
+  //       }
+  //       console.log('📲 onAuthStateChanged תפס את המשתמש:', user.uid);
+  //       fetchBabies(user);
+  //     });
+
+  //     return () => unsubscribe();
+  //   }
+  // }, [navigate]);
 
   const selectedBaby = babies.find((b) => b.id === selectedBabyId);
 
@@ -108,32 +162,41 @@ const BabyTracker = () => {
   // Get Photos
   useEffect(() => {
     const fetchPhotos = async () => {
-      const user = auth.currentUser;
-      if (!user || !selectedBabyId) return;
+      setIsLoadingGetPhotos(true);
 
-      const photosRef = collection(
-        db,
-        'users',
-        user.uid,
-        'babies',
-        selectedBabyId,
-        'photos'
-      );
-      const q = query(photosRef, orderBy('photoDate', 'desc'));
-      const snap = await getDocs(q);
+      try {
+        const user = auth.currentUser;
+        if (!user || !selectedBabyId) return;
 
-      const items = snap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as any;
+        const photosRef = collection(
+          db,
+          'users',
+          user.uid,
+          'babies',
+          selectedBabyId,
+          'photos'
+        );
+        const q = query(photosRef, orderBy('photoDate', 'desc'));
+        const snap = await getDocs(q);
 
-      setPhotos(items);
+        const items = snap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as any;
+
+        setPhotos(items);
+      } catch (error) {
+        console.error('שגיאה בשליפת תמונות:', error);
+      } finally {
+        setIsLoadingGetPhotos(false);
+      }
     };
 
     fetchPhotos();
   }, [selectedBabyId, isUploading]);
 
   if (!selectedBaby) return <Loader />;
+  if (isLoadingGetPhotos) return <Loader />;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -156,7 +219,6 @@ const BabyTracker = () => {
           </select>
         </div>
       )}
-
       {/* כותרת יומן */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">
@@ -166,7 +228,6 @@ const BabyTracker = () => {
           נולד ב: {format(new Date(selectedBaby.birthDate), 'dd/MM/yyyy')}
         </p>
       </div>
-
       <div className="grid md:grid-cols-2 gap-8 mb-8">
         {/* העלאת תמונה */}
         <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
@@ -226,195 +287,55 @@ const BabyTracker = () => {
             </div>
           </div>
         </div>
+        {/* תזכורת חודשית */}
+        <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4 text-right">
+            <Calendar className="w-5 h-5" />
+            <h2 className="text-xl font-semibold">תזכורת חודשית</h2>
+          </div>
+
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl font-bold text-white">Date now</span>
+            </div>
+            <p className="text-gray-600">
+              זה הזמן לצלם את {selectedBaby.name}!
+            </p>
+            <p className="text-sm text-gray-500">התזכורת הבאה: חודש</p>
+          </div>
+        </div>
 
         {/* אפשר להוסיף כאן גלריית תמונות */}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-        {photos.map((photo) => (
-          <div
-            key={photo.id}
-            className="bg-white/80 backdrop-blur-sm rounded-xl shadow p-2"
-          >
-            <img
-              src={photo.imageUrl}
-              alt="תמונה"
-              className="rounded-lg w-full"
-            />
-            <p className="text-sm mt-2 text-right text-gray-600">
-              {photo.note}
-            </p>
-            <p className="text-xs text-gray-400 text-right">
-              {photo.photoDate}
-            </p>
-          </div>
-        ))}
+      </div>{' '}
+      <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
+        <h2 className="text-right text-xl font-semibold mb-6">
+          גלריית התמונות
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {photos.map((photo) => (
+            <div key={photo.id} className="relative group">
+              <div className="aspect-square rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-105">
+                <img
+                  src={photo.imageUrl}
+                  alt={`${selectedBaby.name} - חודש ${photo.photoDate}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute bottom-4 left-4 text-white">
+                    <p className="text-sm">
+                      {format(photo.photoDate, 'dd/MM/yyyy')}
+                    </p>
+                    <p className="font-semibold">תיאור: {photo.note}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
-// const BabyTracker = () => {
-//   const [imageFile, setImageFile] = useState<File | null>(null);
-//   const [imageUrl, setImageUrl] = useState('');
-//   const [date, setDate] = useState(
-//     () => new Date().toISOString().split('T')[0]
-//   );
-//   const [note, setNote] = useState('');
-
-//   const [isSetup, setIsSetup] = useState(false);
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [isUploading, setIsUploading] = useState(false);
-//   const [entries, setEntries] = useState<any[]>([]);
-//   const [groupedByMonth, setGroupedByMonth] = useState<Record<number, any[]>>(
-//     {}
-//   );
-//   const [babies, setBabies] = useState([]);
-//   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
-
-//   // if (isLoading) return <Loader />;
-
-//   const handleSubmit = async () => {
-//     if (!imageFile || !selectedBabyId) return;
-
-//     const user = auth.currentUser;
-//     if (!user) return alert('משתמש לא מחובר');
-
-//     setIsUploading(true);
-
-//     try {
-//       // 1. העלאה ל־Cloudinary
-//       const imageUrl = await uploadToCloudinary(imageFile);
-
-//       // 2. מחשב חודש מתוך תאריך
-//       const photoDateObj = new Date(date);
-//       const month = photoDateObj.getMonth() + 1;
-
-//       // 3. שמירה בפיירסטור במסלול users/{uid}/babies/{babyId}/photos
-//       await addDoc(
-//         collection(db, 'users', user.uid, 'babies', selectedBabyId, 'photos'),
-//         {
-//           imageUrl,
-//           photoDate: date,
-//           month,
-//           note: note || '',
-//           createdAt: serverTimestamp(),
-//         }
-//       );
-
-//       alert('התמונה נוספה בהצלחה!');
-//       // איפוס שדות
-//       setImageFile(null);
-//       setNote('');
-//       setDate(new Date().toISOString().slice(0, 10));
-//     } catch (err) {
-//       console.error('שגיאה:', err);
-//       alert('העלאה נכשלה');
-//     } finally {
-//       setIsUploading(false);
-//     }
-//   };
-
-//   // const handleSubmit = async () => {
-//   //   const user = auth.currentUser;
-//   //   if (!user || !imageFile) return alert('משתמש או קובץ לא קיימים');
-
-//   //   try {
-//   //     setIsUploading(true);
-
-//   //     const uploadedImageUrl = await uploadToCloudinary(imageFile);
-
-//   //     const selectedDate = new Date(date);
-//   //     const month = selectedDate.getMonth() + 1;
-
-//   //     await addBabyEntry({
-//   //       userId: user.uid,
-
-//   //       imageUrl: uploadedImageUrl,
-//   //       month,
-//   //       note,
-//   //       photoDate: date,
-//   //     });
-
-//   //     alert('התווסף בהצלחה!');
-//   //   } catch (err) {
-//   //     console.error('שגיאה בהעלאה:', err);
-//   //   } finally {
-//   //     setIsUploading(false);
-//   //   }
-//   // };
-
-//   // useEffect(() => {
-//   //   const fetchEntries = async () => {
-//   //     setIsLoading(true);
-//   //     const user = auth.currentUser;
-//   //     console.log(user);
-//   //     if (!user) return;
-
-//   //     const allEntries = await getBabyEntriesByUser(user.uid);
-//   //     setEntries(allEntries);
-
-//   //     // קיבוץ לפי חודש
-//   //     const grouped: Record<number, any[]> = {};
-//   //     allEntries.forEach((entry) => {
-//   //       const month = entry.month || 0;
-//   //       if (!grouped[month]) grouped[month] = [];
-//   //       grouped[month].push(entry);
-//   //     });
-
-//   //     setGroupedByMonth(grouped);
-//   //     setIsLoading(false);
-//   //   };
-
-//   //   fetchEntries();
-//   // }, []);
-
-//   useEffect(() => {
-//     const user = auth.currentUser;
-//     if (!user) return;
-
-//     const fetchBabies = async () => {
-//       const q = query(collection(db, 'users', user.uid, 'babies'));
-//       const snapshot = await getDocs(q);
-//       const babiesList = snapshot.docs.map((doc) => ({
-//         id: doc.id,
-//         ...doc.data(),
-//       }));
-//       setBabies(babiesList);
-//       if (babiesList.length) {
-//         setSelectedBabyId(babiesList[0].id);
-//       }
-//     };
-
-//     fetchBabies();
-//   }, []);
-
-//   useEffect(() => {
-//     const fetchPhotos = async () => {
-//       if (!selectedBabyId || !auth.currentUser) return;
-
-//       const photosRef = collection(
-//         db,
-//         'users',
-//         auth.currentUser.uid,
-//         'babies',
-//         selectedBabyId,
-//         'photos'
-//       );
-//       const snapshot = await getDocs(photosRef);
-//       const images = snapshot.docs.map((doc) => doc.data());
-//       setPhotos(images); // נגיד שאתה שומר ב-state
-//     };
-
-//     fetchPhotos();
-//   }, [selectedBabyId]);
-
-//   if (isLoading) return <Loader />;
-
-//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = e.target.files?.[0];
-//     if (file) {
-//       setImageFile(file);
-//     }
-//   };
 
 //   return (
 //     <div className="min-h-screen  from-pink-50 via-blue-50 to-purple-50">
@@ -489,25 +410,25 @@ const BabyTracker = () => {
 //           </div>
 
 //           {/* תזכורת חודשית */}
-//           <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-//             <div className="flex items-center gap-2 mb-4 text-right">
-//               <Calendar className="w-5 h-5" />
-//               <h2 className="text-xl font-semibold">תזכורת חודשית</h2>
-//             </div>
+// <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
+//   <div className="flex items-center gap-2 mb-4 text-right">
+//     <Calendar className="w-5 h-5" />
+//     <h2 className="text-xl font-semibold">תזכורת חודשית</h2>
+//   </div>
 
-//             <div className="text-center space-y-4">
-//               <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center mx-auto">
-//                 <span className="text-2xl font-bold text-white">
-//                   {currentMonth}
-//                 </span>
-//               </div>
-//               <p className="text-gray-600">זה הזמן לצלם את {babyData.name}!</p>
-//               <p className="text-sm text-gray-500">
-//                 התזכורת הבאה: חודש {currentMonth + 1}
-//               </p>
-//             </div>
-//           </div>
-//         </div>
+//   <div className="text-center space-y-4">
+//     <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center mx-auto">
+//       <span className="text-2xl font-bold text-white">
+//         {currentMonth}
+//       </span>
+//     </div>
+//     <p className="text-gray-600">זה הזמן לצלם את {babyData.name}!</p>
+//     <p className="text-sm text-gray-500">
+//       התזכורת הבאה: חודש {currentMonth + 1}
+//     </p>
+//   </div>
+// </div>
+// </div>
 
 //         {/* גלריית תמונות */}
 //         <div className="space-y-8">
