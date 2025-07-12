@@ -1,7 +1,7 @@
 import { Calendar, Camera, Heart, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
-import { Loader } from './ui/Loader';
+import { Loader } from '../ui/Loader';
 import { auth, db } from '@/firebase';
 import { uploadToCloudinary } from '@/utils/CloudinaryUpload';
 
@@ -203,13 +203,13 @@ const BabyTracker = () => {
       {/* תפריט בחירת תינוק */}
       {babies.length > 1 && (
         <div className="mb-6 text-right">
-          <label className="block mb-1 font-medium text-gray-700">
+          <label className="block mb-1 font-bold text-gray-700">
             בחר תינוק
           </label>
           <select
             value={selectedBabyId ?? ''}
             onChange={(e) => setSelectedBabyId(e.target.value)}
-            className="border rounded-lg px-4 py-2"
+            className="border rounded-lg border-red-400 px-6 py-2"
           >
             {babies.map((baby) => (
               <option key={baby.id} value={baby.id}>

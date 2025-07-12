@@ -1,4 +1,4 @@
-import BabySetupForm from '@/components/BabySetupForm';
+import BabySetupForm from '@/components/babies/BabySetupForm';
 import { auth, db } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useState } from 'react';
@@ -12,6 +12,12 @@ const BabySetup = () => {
   const handleSubmit = async () => {
     const user = auth.currentUser;
     if (!user) return alert('לא מחובר');
+
+    const today = new Date().toISOString().split('T')[0];
+    if (birthDate > today) {
+      alert('תאריך לידה לא יכול להיות בעתיד');
+      return;
+    }
 
     try {
       await addDoc(collection(db, 'users', user.uid, 'babies'), {

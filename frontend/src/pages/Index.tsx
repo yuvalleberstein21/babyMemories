@@ -1,4 +1,4 @@
-import BabyTracker from '@/components/BabyTracker';
+import BabyTracker from '@/components/babies/BabyTracker';
 
 const Index = () => {
   return <BabyTracker />;

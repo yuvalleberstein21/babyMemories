@@ -16,7 +16,10 @@ const BabySetupForm = ({
   handleSubmit,
 }: Props) => {
   return (
-    <div className="h-screen from-pink-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div
+      className="h-screen from-pink-50 via-blue-50 to-purple-50 flex items-center justify-center p-4"
+      dir="rtl"
+    >
       <div className="w-full max-w-md bg-white/80 backdrop-blur-sm shadow-2xl rounded-2xl p-6">
         {/* Header */}
         <div className="text-center space-y-4 mb-6">
@@ -60,6 +63,7 @@ const BabySetupForm = ({
               value={birthDate}
               type="date"
               onChange={(e) => setBirthDate(e.target.value)}
+              max={new Date().toISOString().split('T')[0]}
               required
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-300 text-right"
             />
@@ -72,7 +76,7 @@ const BabySetupForm = ({
             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
           >
             <Star className="w-4 h-4" />
-            בואו נתחיל!
+            בואו נתחיל !
           </button>
         </form>
       </div>
