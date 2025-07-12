@@ -1,4 +1,3 @@
-import { Calendar, Camera, Heart, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { Loader } from '../ui/Loader';
@@ -15,6 +14,10 @@ import {
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
+import PhotoGallery from './PhotoGallery';
+import PhotoUploadForm from './PhotoUploadForm';
+import MonthlyReminder from './MonthlyReminder';
+import BabySelector from './BabySelector';
 
 const BabyTracker = () => {
   const [babies, setBabies] = useState<
@@ -199,296 +202,41 @@ const BabyTracker = () => {
   if (isLoadingGetPhotos) return <Loader />;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8" dir="rtl">
       {/* תפריט בחירת תינוק */}
-      {babies.length > 1 && (
-        <div className="mb-6 text-right">
-          <label className="block mb-1 font-bold text-gray-700">
-            בחר תינוק
-          </label>
-          <select
-            value={selectedBabyId ?? ''}
-            onChange={(e) => setSelectedBabyId(e.target.value)}
-            className="border rounded-lg border-red-400 px-6 py-2"
-          >
-            {babies.map((baby) => (
-              <option key={baby.id} value={baby.id}>
-                {baby.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <BabySelector
+        babies={babies}
+        selectedBabyId={selectedBabyId}
+        setSelectedBabyId={setSelectedBabyId}
+      />
       {/* כותרת יומן */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold text-gray-800 mb-2">
           יומן {selectedBaby.name} ❤️
         </h1>
         <p className="text-gray-600">
-          נולד ב: {format(new Date(selectedBaby.birthDate), 'dd/MM/yyyy')}
+          נולד/ה ב : {format(new Date(selectedBaby.birthDate), 'dd/MM/yyyy')}
         </p>
       </div>
+      {/* העלאת תמונה */}
       <div className="grid md:grid-cols-2 gap-8 mb-8">
-        {/* העלאת תמונה */}
-        <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4 text-right">
-            <Camera className="w-5 h-5" />
-            <h2 className="text-xl font-semibold">
-              חודש {new Date(date).getMonth() + 1}
-            </h2>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label
-                htmlFor="photos"
-                className="block text-right mb-1 text-gray-700 font-medium"
-              >
-                בחרו תמונה
-              </label>
-              {imageFile && (
-                <img
-                  src={URL.createObjectURL(imageFile)}
-                  alt="תצוגה"
-                  width={200}
-                />
-              )}
-              <input
-                id="photos"
-                type="file"
-                onChange={handleFileChange}
-                accept="image/*"
-                className="w-full border rounded-lg px-4 py-2 text-right"
-              />
-
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full border rounded-lg px-4 py-2 text-right mt-4"
-              />
-
-              <textarea
-                placeholder="הערה (לא חובה)"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="w-full border rounded-lg px-4 py-2 text-right mt-4"
-              />
-            </div>
-
-            <div className="text-center space-y-2">
-              <button
-                onClick={handleSubmit}
-                disabled={isUploading}
-                className="bg-gradient-to-r from-green-400 to-blue-400 hover:from-green-500 hover:to-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-300"
-              >
-                {isUploading ? 'מעלה...' : 'שמור'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <PhotoUploadForm
+          imageFile={imageFile}
+          date={date}
+          note={note}
+          isUploading={isUploading}
+          onFileChange={handleFileChange}
+          onDateChange={setDate}
+          onNoteChange={setNote}
+          onSubmit={handleSubmit}
+        />
         {/* תזכורת חודשית */}
-        <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4 text-right">
-            <Calendar className="w-5 h-5" />
-            <h2 className="text-xl font-semibold">תזכורת חודשית</h2>
-          </div>
-
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center mx-auto">
-              <span className="text-2xl font-bold text-white">Date now</span>
-            </div>
-            <p className="text-gray-600">
-              זה הזמן לצלם את {selectedBaby.name}!
-            </p>
-            <p className="text-sm text-gray-500">התזכורת הבאה: חודש</p>
-          </div>
-        </div>
-
-        {/* אפשר להוסיף כאן גלריית תמונות */}
-      </div>{' '}
-      <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-        <h2 className="text-right text-xl font-semibold mb-6">
-          גלריית התמונות
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {photos.map((photo) => (
-            <div key={photo.id} className="relative group">
-              <div className="aspect-square rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-105">
-                <img
-                  src={photo.imageUrl}
-                  alt={`${selectedBaby.name} - חודש ${photo.photoDate}`}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="absolute bottom-4 left-4 text-white">
-                    <p className="text-sm">
-                      {format(photo.photoDate, 'dd/MM/yyyy')}
-                    </p>
-                    <p className="font-semibold">תיאור: {photo.note}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <MonthlyReminder babyName={selectedBaby.name} />
       </div>
+      {/* גלריית תמונות */}
+      <PhotoGallery photos={photos} babyName={selectedBaby.name} />
     </div>
   );
 };
-
-//   return (
-//     <div className="min-h-screen  from-pink-50 via-blue-50 to-purple-50">
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="text-center mb-8">
-//           <h1 className="text-4xl font-bold text-gray-800 mb-2">
-//             יומן {babyData.name} ❤️
-//           </h1>
-//           <p className="text-gray-600">
-//             נולד ב: {format(babyData.birthDate, 'dd/MM/yyyy')}
-//           </p>
-//         </div>
-
-//         <div className="grid md:grid-cols-2 gap-8 mb-8">
-//           {/* העלאת תמונות */}
-//           <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-//             <div className="flex items-center gap-2 mb-4 text-right">
-//               <Camera className="w-5 h-5" />
-//               <h2 className="text-xl font-semibold">
-//                 חודש {new Date(date).getMonth() + 1}
-//               </h2>
-//             </div>
-
-//             <div className="space-y-4">
-//               <div>
-//                 <label
-//                   htmlFor="photos"
-//                   className="block text-right mb-1 text-gray-700 font-medium"
-//                 >
-//                   בחרו תמונות
-//                 </label>
-//                 {imageFile && (
-//                   <img
-//                     src={URL.createObjectURL(imageFile)}
-//                     alt="תצוגה"
-//                     width={200}
-//                   />
-//                 )}
-//                 <input
-//                   id="photos"
-//                   type="file"
-//                   multiple
-//                   onChange={handleFileChange}
-//                   accept="image/*"
-//                   className="w-full border rounded-lg px-4 py-2 text-right"
-//                 />
-
-//                 <input
-//                   type="date"
-//                   value={date}
-//                   onChange={(e) => setDate(e.target.value)}
-//                 />
-
-//                 <textarea
-//                   placeholder="הערה (לא חובה)"
-//                   value={note}
-//                   onChange={(e) => setNote(e.target.value)}
-//                 />
-//               </div>
-
-//               <div className="text-center space-y-2">
-//                 <p className="text-sm text-gray-600">נבחרו 3 תמונות</p>
-//                 <button
-//                   onClick={handleSubmit}
-//                   disabled={isUploading}
-//                   className="bg-gradient-to-r from-green-400 to-blue-400 hover:from-green-500 hover:to-blue-500 text-white font-semibold px-6 py-2 rounded-lg transition-all duration-300"
-//                 >
-//                   {isUploading ? 'מעלה...' : 'שמור'}
-//                 </button>
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* תזכורת חודשית */}
-// <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-//   <div className="flex items-center gap-2 mb-4 text-right">
-//     <Calendar className="w-5 h-5" />
-//     <h2 className="text-xl font-semibold">תזכורת חודשית</h2>
-//   </div>
-
-//   <div className="text-center space-y-4">
-//     <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center mx-auto">
-//       <span className="text-2xl font-bold text-white">
-//         {currentMonth}
-//       </span>
-//     </div>
-//     <p className="text-gray-600">זה הזמן לצלם את {babyData.name}!</p>
-//     <p className="text-sm text-gray-500">
-//       התזכורת הבאה: חודש {currentMonth + 1}
-//     </p>
-//   </div>
-// </div>
-// </div>
-
-//         {/* גלריית תמונות */}
-//         <div className="space-y-8">
-//           {Object.entries(groupedByMonth).map(([month, photos]) => (
-//             <div key={month}>
-//               <h2 className="text-xl font-bold mb-2">חודש {month}</h2>
-//               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-//                 {photos.map((entry) => (
-//                   <div
-//                     key={entry.id}
-//                     className="rounded overflow-hidden shadow bg-white p-2"
-//                   >
-//                     <img
-//                       src={entry.imageUrl}
-//                       alt={entry.note}
-//                       className="rounded w-full"
-//                     />
-//                     <p className="text-sm mt-1 text-gray-700">{entry.note}</p>
-//                     <p className="text-xs text-gray-500">
-//                       {entry.photoDate &&
-//                         new Date(entry.photoDate).toLocaleDateString('he-IL')}
-//                     </p>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//         {/* {Object.entries(groupedByMonth).map(([month, photos]) => (
-//           <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-//             <h2 className="text-right text-xl font-semibold mb-6">
-//               גלריית התמונות
-//             </h2>
-
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//               {photos.map((photo) => (
-//                 <div key={month} className="relative group">
-//                   <div className="aspect-square rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-105">
-//                     <img
-//                       src={photo.url}
-//                       alt={`${babyData.name} - חודש ${photo.month}`}
-//                       className="w-full h-full object-cover"
-//                     />
-//                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-//                       <div className="absolute bottom-4 left-4 text-white">
-//                         <p className="font-semibold">חודש {month}</p>
-//                         <p className="text-sm">
-//                           {format(photo.uploadDate, 'dd/MM/yyyy')}
-//                         </p>
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-//         ))} */}
-//       </div>
-//     </div>
-//   );
-// };
 
 export default BabyTracker;
