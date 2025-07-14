@@ -43,17 +43,10 @@ const BabyTracker = () => {
         return;
       }
 
-      console.log('✅ משתמש מחובר:', user.uid);
-
       const babiesRef = collection(db, 'users', user.uid, 'babies');
-      console.log('📁 בודק path:', babiesRef.path);
 
       try {
         const snap = await getDocs(babiesRef);
-        console.log(
-          '📦 Found docs:',
-          snap.docs.map((doc) => doc.data())
-        );
 
         if (snap.empty) {
           console.log('⚠️ אין תינוקות');
@@ -66,7 +59,6 @@ const BabyTracker = () => {
           ...(doc.data() as { name: string; birthDate: string }),
         }));
 
-        console.log('👶 תינוקות:', babyList);
         setBabies(babyList);
         setSelectedBabyId(babyList[0].id);
       } catch (err) {
@@ -198,6 +190,31 @@ const BabyTracker = () => {
     fetchPhotos();
   }, [selectedBabyId, isUploading]);
 
+  const handleAddBabyInline = async (babyName: string, birthDate: string) => {
+    const user = auth.currentUser;
+    if (!user) return alert('לא מחובר');
+
+    try {
+      const docRef = await addDoc(collection(db, 'users', user.uid, 'babies'), {
+        name: babyName,
+        birthDate,
+        createdAt: serverTimestamp(),
+      });
+
+      const newBaby = {
+        id: docRef.id,
+        name: babyName,
+        birthDate,
+      };
+
+      setBabies((prev) => [...prev, newBaby]);
+      setSelectedBabyId(newBaby.id);
+    } catch (err) {
+      console.error('שגיאה בהוספת תינוק חדש:', err);
+      alert('שגיאה בהוספה');
+    }
+  };
+
   if (!selectedBaby) return <Loader />;
   if (isLoadingGetPhotos) return <Loader />;
 
@@ -208,6 +225,7 @@ const BabyTracker = () => {
         babies={babies}
         selectedBabyId={selectedBabyId}
         setSelectedBabyId={setSelectedBabyId}
+        onAddBaby={handleAddBabyInline}
       />
       {/* כותרת יומן */}
       <div className="text-center mb-8">

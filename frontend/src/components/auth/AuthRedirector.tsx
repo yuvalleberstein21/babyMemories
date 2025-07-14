@@ -9,15 +9,20 @@ import LoginForm from '@/components/auth/LoginForm';
 export const AuthRedirector = () => {
   const navigate = useNavigate();
   const [checking, setChecking] = useState(true);
-  const [userExists, setUserExists] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setUserExists(false);
-        setChecking(false);
-        return;
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setChecking(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const checkBabies = async () => {
+      if (!user) return;
 
       const babiesRef = collection(db, 'users', user.uid, 'babies');
       const snap = await getDocs(babiesRef);
@@ -27,11 +32,15 @@ export const AuthRedirector = () => {
       } else {
         navigate('/baby-tracker');
       }
-    });
+    };
 
-    return () => unsubscribe();
-  }, [navigate]);
+    if (user) {
+      checkBabies();
+    }
+  }, [user, navigate]);
 
   if (checking) return <Loader />;
-  return <LoginForm />;
+  if (!user) return <LoginForm />;
+
+  return null;
 };
