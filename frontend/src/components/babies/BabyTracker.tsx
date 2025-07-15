@@ -1,79 +1,44 @@
-import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
-import { Loader } from '../ui/Loader';
+import { useState } from 'react';
+
+import { toast } from 'react-hot-toast';
 import { auth, db } from '@/firebase';
 import { uploadToCloudinary } from '@/utils/CloudinaryUpload';
-import {
-  addDoc,
-  collection,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
-import { onAuthStateChanged } from 'firebase/auth';
-import PhotoGallery from './PhotoGallery';
-import PhotoUploadForm from './PhotoUploadForm';
-import MonthlyReminder from './MonthlyReminder';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+
+import { useBabies } from '@/hooks/useBabies';
+import { usePhotos } from '@/hooks/usePhotos';
+
+import { Loader } from '../ui/Loader';
 import BabySelector from './BabySelector';
-import { toast } from 'react-hot-toast';
+import PhotoUploadForm from './PhotoUploadForm';
+import PhotoGallery from './PhotoGallery';
+import MonthlyReminder from './MonthlyReminder';
 
 const MAX_SIZE_MB = 1.5;
+
 const BabyTracker = () => {
-  const [babies, setBabies] = useState<
-    { id: string; name: string; birthDate: string }[]
-  >([]);
-  const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [note, setNote] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [isLoadingGetPhotos, setIsLoadingGetPhotos] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [photos, setPhotos] = useState<
-    { id: string; imageUrl: string; note?: string; photoDate?: string }[]
-  >([]);
 
-  const navigate = useNavigate();
+  const {
+    babies,
+    selectedBabyId,
+    setSelectedBabyId,
+    handleAddBaby,
+    selectedBaby,
+  } = useBabies();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        navigate('/');
-        return;
-      }
-
-      const babiesRef = collection(db, 'users', user.uid, 'babies');
-
-      try {
-        const snap = await getDocs(babiesRef);
-
-        if (snap.empty) {
-          navigate('/baby-setup');
-          return;
-        }
-
-        const babyList = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as { name: string; birthDate: string }),
-        }));
-
-        setBabies(babyList);
-        setSelectedBabyId(babyList[0].id);
-      } catch (err) {
-        console.error('שגיאה בשליפה מ־babies:', err);
-        toast.error('שגיאה בהצגת תינוקות');
-      }
-    });
-
-    return () => unsubscribe();
-  }, [navigate]);
-
-  const selectedBaby = babies.find((b) => b.id === selectedBabyId);
+  const {
+    photos,
+    isLoading: isLoadingPhotos,
+    handleDeletePhoto,
+    handleEditPhoto,
+  } = usePhotos(selectedBabyId, isUploading);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     const isImage = file.type.startsWith('image/');
@@ -91,6 +56,7 @@ const BabyTracker = () => {
 
     setImageFile(file);
   };
+
   const handleSubmit = async () => {
     if (!imageFile || !selectedBabyId) {
       toast.error('בחר תמונה קודם');
@@ -138,116 +104,43 @@ const BabyTracker = () => {
       setIsUploading(false);
     }
   };
-  // Get Photos
-  useEffect(() => {
-    const fetchPhotos = async () => {
-      setIsLoadingGetPhotos(true);
-
-      try {
-        const user = auth.currentUser;
-        if (!user || !selectedBabyId) return;
-
-        const photosRef = collection(
-          db,
-          'users',
-          user.uid,
-          'babies',
-          selectedBabyId,
-          'photos'
-        );
-        const q = query(photosRef, orderBy('photoDate', 'desc'));
-        const snap = await getDocs(q);
-
-        const items = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as any;
-
-        setPhotos(items);
-      } catch (error) {
-        console.error('שגיאה בשליפה מ־babies:', error);
-        toast.error('שגיאה בטעינת התינוקות');
-      } finally {
-        setIsLoadingGetPhotos(false);
-      }
-    };
-
-    fetchPhotos();
-  }, [selectedBabyId, isUploading]);
-
-  const handleAddBabyInline = async (babyName: string, birthDate: string) => {
-    const user = auth.currentUser;
-
-    if (!user) {
-      toast.error('לא מחובר');
-      return;
-    }
-
-    try {
-      const docRef = await toast.promise(
-        addDoc(collection(db, 'users', user.uid, 'babies'), {
-          name: babyName,
-          birthDate,
-          createdAt: serverTimestamp(),
-        }),
-        {
-          loading: 'מוסיף תינוק...',
-          success: 'תינוק נוסף בהצלחה!',
-          error: 'שגיאה בהוספה',
-        }
-      );
-      const newBaby = {
-        id: docRef.id,
-        name: babyName,
-        birthDate,
-      };
-
-      setBabies((prev) => [...prev, newBaby]);
-      setSelectedBabyId(newBaby.id);
-    } catch (err) {
-      console.error('שגיאה בהוספת תינוק חדש:', err);
-      toast.error('שגיאה בהוספה תינוק חדש');
-    }
-  };
 
   if (!selectedBaby) return <Loader />;
-  if (isLoadingGetPhotos) return <Loader />;
 
   return (
     <div className="container mx-auto px-4 py-8" dir="rtl">
-      {/* תפריט בחירת תינוק */}
       <BabySelector
         babies={babies}
         selectedBabyId={selectedBabyId}
         setSelectedBabyId={setSelectedBabyId}
-        onAddBaby={handleAddBabyInline}
+        onAddBaby={handleAddBaby}
       />
-      {/* כותרת יומן */}
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">
-          יומן {selectedBaby.name} ❤️
-        </h1>
-        <p className="text-gray-600">
-          נולד/ה ב : {format(new Date(selectedBaby.birthDate), 'dd/MM/yyyy')}
-        </p>
-      </div>
-      {/* העלאת תמונה */}
+
       <div className="grid md:grid-cols-2 gap-8 mb-8">
+        <div className="text-center mb-8">
+          <MonthlyReminder babyName={selectedBaby.name} />
+        </div>
         <PhotoUploadForm
           imageFile={imageFile}
-          date={date}
-          note={note}
-          isUploading={isUploading}
           onFileChange={handleFileChange}
-          onDateChange={setDate}
-          onNoteChange={setNote}
+          note={note}
+          onNoteChange={(val) => setNote(val)}
+          date={date}
+          onDateChange={(val) => setDate(val)}
           onSubmit={handleSubmit}
+          isUploading={isUploading}
         />
-        {/* תזכורת חודשית */}
-        <MonthlyReminder babyName={selectedBaby.name} />
       </div>
-      {/* גלריית תמונות */}
-      <PhotoGallery photos={photos} babyName={selectedBaby.name} />
+      {isLoadingPhotos ? (
+        <Loader />
+      ) : (
+        <PhotoGallery
+          babyName={selectedBaby.name}
+          photos={photos}
+          onDeletePhoto={handleDeletePhoto}
+          onEditPhoto={handleEditPhoto}
+        />
+      )}
     </div>
   );
 };

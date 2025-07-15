@@ -52,6 +52,7 @@ const PhotoUploadForm = ({
           <input
             type="date"
             value={date}
+            max={new Date().toISOString().slice(0, 10)}
             onChange={(e) => onDateChange(e.target.value)}
             className="w-full border rounded-lg px-4 py-2 text-right mt-4"
           />
