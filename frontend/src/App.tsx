@@ -7,10 +7,12 @@ import Register from './pages/Register';
 import { AuthRedirector } from './components/auth/AuthRedirector';
 import { Header } from './components/layout/Header';
 import { PrivateRoute } from './components/auth/PrivateRoute';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <>
+      <Toaster position="top-center" reverseOrder={false} />
       <BrowserRouter>
         <Header />
         <Routes>

@@ -1,30 +1,10 @@
-import { login, register } from '@/services/AuthService';
-import { firebaseAuthErrors } from '@/utils/firebaseErrors';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+// src/components/auth/LoginForm.tsx
+import { useLogin } from '@/hooks/useLogin';
+import { Link } from 'react-router-dom';
 
 const LoginForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const handleLogin = async (e: any) => {
-    e.preventDefault();
-    setErrorMessage('');
-    setIsLoading(true);
-
-    try {
-      const user = await login(email, password);
-      if (user) navigate('/baby-setup');
-    } catch (err: any) {
-      const message = firebaseAuthErrors[err.code] || 'אירעה שגיאה, נסה שוב';
-      setErrorMessage(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { email, setEmail, password, setPassword, isLoading, handleLogin } =
+    useLogin();
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -50,12 +30,7 @@ const LoginForm = () => {
           <p className="text-gray-600">התחברות ליומן התינוק שלך</p>
         </div>
 
-        <form className="space-y-4">
-          {errorMessage && (
-            <span className=" text-red-500 rounded-lg p-2 font-medium">
-              {errorMessage}
-            </span>
-          )}
+        <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label
               htmlFor="email"
@@ -65,12 +40,12 @@ const LoginForm = () => {
             </label>
             <input
               id="email"
-              name="email"
               type="email"
-              placeholder="your@email.com"
+              value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-300 text-right"
+              placeholder="your@email.com"
             />
           </div>
 
@@ -83,19 +58,18 @@ const LoginForm = () => {
             </label>
             <input
               id="password"
-              name="password"
               type="password"
-              placeholder="••••••••"
+              value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-300 text-right"
+              placeholder="••••••••"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            onClick={handleLogin}
             className="w-full bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
           >
             {isLoading ? 'מתחבר...' : 'התחברות'}
@@ -104,7 +78,7 @@ const LoginForm = () => {
 
         <p className="text-center text-sm text-gray-600">
           אין לך חשבון?{' '}
-          <Link to={'/auth/register'} className="text-pink-500 hover:underline">
+          <Link to="/auth/register" className="text-pink-500 hover:underline">
             הרשם כאן
           </Link>
         </p>

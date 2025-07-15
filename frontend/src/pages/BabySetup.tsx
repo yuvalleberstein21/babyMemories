@@ -8,6 +8,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 const BabySetup = () => {
@@ -25,10 +26,9 @@ const BabySetup = () => {
       const snap = await getDocs(babiesRef);
 
       if (!snap.empty) {
-        // יש כבר תינוק, ננווט החוצה
         navigate('/baby-tracker');
       } else {
-        setChecking(false); // אפשר להציג את הטופס
+        setChecking(false);
       }
     };
 
@@ -37,11 +37,14 @@ const BabySetup = () => {
 
   const handleSubmit = async () => {
     const user = auth.currentUser;
-    if (!user) return alert('לא מחובר');
+    if (!user) {
+      toast.error('משתמש לא מחובר');
+      return;
+    }
 
     const today = new Date().toISOString().split('T')[0];
     if (birthDate > today) {
-      alert('תאריך לידה לא יכול להיות בעתיד');
+      toast.error('תאריך לידה לא יכול להיות בעתיד');
       return;
     }
 
@@ -54,6 +57,7 @@ const BabySetup = () => {
       navigate('/baby-tracker');
     } catch (err) {
       console.error('שגיאה בשמירה', err);
+      toast.error('שגיאה בשמירה');
     }
   };
 

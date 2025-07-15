@@ -1,30 +1,17 @@
-import { register } from '@/services/AuthService';
-import { firebaseAuthErrors } from '@/utils/firebaseErrors';
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useRegister } from '@/hooks/useRegister';
+import { Link } from 'react-router-dom';
 
 const RegisterForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
-
-  const handleRegister = async (e: any) => {
-    e.preventDefault();
-    setErrorMessage('');
-    setIsLoading(true);
-
-    try {
-      const user = await register(email, password);
-      if (user) navigate('/');
-    } catch (err: any) {
-      const message = firebaseAuthErrors[err.code] || 'אירעה שגיאה, נסה שוב';
-      setErrorMessage(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    fullName,
+    setFullName,
+    email,
+    setEmail,
+    password,
+    setPassword,
+    isLoading,
+    handleRegister,
+  } = useRegister();
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -51,11 +38,23 @@ const RegisterForm = () => {
         </div>
 
         <form className="space-y-4">
-          {errorMessage && (
-            <span className=" text-red-500 rounded-lg p-2 font-medium">
-              {errorMessage}
-            </span>
-          )}
+          <div>
+            <label
+              htmlFor="fullName"
+              className="block text-right font-medium text-gray-700"
+            >
+              שם מלא
+            </label>
+            <input
+              id="fullName"
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="שם מלא"
+              required
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-300 text-right"
+            />
+          </div>
           <div>
             <label
               htmlFor="email"
@@ -67,13 +66,13 @@ const RegisterForm = () => {
               id="email"
               name="email"
               type="email"
+              value={email}
               placeholder="your@email.com"
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-pink-300 text-right"
             />
           </div>
-
           <div>
             <label
               htmlFor="password"
@@ -85,6 +84,7 @@ const RegisterForm = () => {
               id="password"
               name="password"
               type="password"
+              value={password}
               placeholder="••••••••"
               onChange={(e) => setPassword(e.target.value)}
               required

@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Loader } from '../ui/Loader';
 import { auth, db } from '@/firebase';
 import { uploadToCloudinary } from '@/utils/CloudinaryUpload';
-
 import {
   addDoc,
   collection,
@@ -18,7 +17,9 @@ import PhotoGallery from './PhotoGallery';
 import PhotoUploadForm from './PhotoUploadForm';
 import MonthlyReminder from './MonthlyReminder';
 import BabySelector from './BabySelector';
+import { toast } from 'react-hot-toast';
 
+const MAX_SIZE_MB = 1.5;
 const BabyTracker = () => {
   const [babies, setBabies] = useState<
     { id: string; name: string; birthDate: string }[]
@@ -38,7 +39,6 @@ const BabyTracker = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        console.log('❌ אין משתמש');
         navigate('/');
         return;
       }
@@ -49,7 +49,6 @@ const BabyTracker = () => {
         const snap = await getDocs(babiesRef);
 
         if (snap.empty) {
-          console.log('⚠️ אין תינוקות');
           navigate('/baby-setup');
           return;
         }
@@ -63,97 +62,82 @@ const BabyTracker = () => {
         setSelectedBabyId(babyList[0].id);
       } catch (err) {
         console.error('שגיאה בשליפה מ־babies:', err);
+        toast.error('שגיאה בהצגת תינוקות');
       }
     });
 
     return () => unsubscribe();
   }, [navigate]);
 
-  //   const currentUser = auth.currentUser;
-
-  //   const fetchBabies = async (user: typeof auth.currentUser) => {
-  //     const babiesRef = collection(db, 'users', user!.uid, 'babies');
-
-  //     const snap = await getDocs(babiesRef);
-
-  //     if (snap.empty) {
-  //       navigate('/baby-setup');
-  //       return;
-  //     }
-
-  //     const babyList = snap.docs.map((doc) => ({
-  //       id: doc.id,
-  //       ...(doc.data() as { name: string; birthDate: string }),
-  //     }));
-
-  //     setBabies(babyList);
-  //     setSelectedBabyId(babyList[0].id);
-  //   };
-
-  //   if (currentUser) {
-  //     console.log('👶 משתמש קיים כבר עם currentUser:', currentUser.uid);
-  //     fetchBabies(currentUser);
-  //   } else {
-  //     const unsubscribe = onAuthStateChanged(auth, (user) => {
-  //       if (!user) {
-  //         navigate('/');
-  //         return;
-  //       }
-  //       console.log('📲 onAuthStateChanged תפס את המשתמש:', user.uid);
-  //       fetchBabies(user);
-  //     });
-
-  //     return () => unsubscribe();
-  //   }
-  // }, [navigate]);
-
   const selectedBaby = babies.find((b) => b.id === selectedBabyId);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setImageFile(file);
+
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isSizeValid = file.size / 1024 / 1024 <= MAX_SIZE_MB;
+
+    if (!isImage) {
+      toast.error('נא לבחור קובץ תמונה בלבד');
+      return;
+    }
+
+    if (!isSizeValid) {
+      toast.error('התמונה חורגת מהמגבלה של MB 1.5');
+      return;
+    }
+
+    setImageFile(file);
   };
-
   const handleSubmit = async () => {
-    if (!imageFile || !selectedBabyId) return;
-
-    console.log('🔍 קובץ להעלאה:', imageFile);
-
-    console.log('🔍 סוג קובץ:', imageFile?.type);
+    if (!imageFile || !selectedBabyId) {
+      toast.error('בחר תמונה קודם');
+      return;
+    }
 
     const user = auth.currentUser;
-    if (!user) return alert('משתמש לא מחובר');
+    if (!user) {
+      toast.error('משתמש לא מחובר');
+      return;
+    }
 
     setIsUploading(true);
 
+    const uploadTask = toast.promise(
+      (async () => {
+        const imageUrl = await uploadToCloudinary(imageFile);
+        const photoDateObj = new Date(date);
+        const month = photoDateObj.getMonth() + 1;
+
+        await addDoc(
+          collection(db, 'users', user.uid, 'babies', selectedBabyId, 'photos'),
+          {
+            imageUrl,
+            photoDate: date,
+            month,
+            note: note || '',
+            createdAt: serverTimestamp(),
+          }
+        );
+      })(),
+      {
+        loading: 'מעלה תמונה...',
+        success: 'התמונה נוספה בהצלחה! 🎉',
+        error: 'העלאה נכשלה 😢',
+      }
+    );
+
     try {
-      const imageUrl = await uploadToCloudinary(imageFile);
-      const photoDateObj = new Date(date);
-      const month = photoDateObj.getMonth() + 1;
-
-      await addDoc(
-        collection(db, 'users', user.uid, 'babies', selectedBabyId, 'photos'),
-        {
-          imageUrl,
-          photoDate: date,
-          month,
-          note: note || '',
-          createdAt: serverTimestamp(),
-        }
-      );
-
-      alert('התמונה נוספה!');
+      await uploadTask;
       setImageFile(null);
       setNote('');
       setDate(new Date().toISOString().slice(0, 10));
-    } catch (err) {
-      console.error('שגיאה בהעלאה:', err);
-      alert('העלאה נכשלה');
     } finally {
       setIsUploading(false);
     }
   };
-
   // Get Photos
   useEffect(() => {
     const fetchPhotos = async () => {
@@ -181,7 +165,8 @@ const BabyTracker = () => {
 
         setPhotos(items);
       } catch (error) {
-        console.error('שגיאה בשליפת תמונות:', error);
+        console.error('שגיאה בשליפה מ־babies:', error);
+        toast.error('שגיאה בטעינת התינוקות');
       } finally {
         setIsLoadingGetPhotos(false);
       }
@@ -192,15 +177,25 @@ const BabyTracker = () => {
 
   const handleAddBabyInline = async (babyName: string, birthDate: string) => {
     const user = auth.currentUser;
-    if (!user) return alert('לא מחובר');
+
+    if (!user) {
+      toast.error('לא מחובר');
+      return;
+    }
 
     try {
-      const docRef = await addDoc(collection(db, 'users', user.uid, 'babies'), {
-        name: babyName,
-        birthDate,
-        createdAt: serverTimestamp(),
-      });
-
+      const docRef = await toast.promise(
+        addDoc(collection(db, 'users', user.uid, 'babies'), {
+          name: babyName,
+          birthDate,
+          createdAt: serverTimestamp(),
+        }),
+        {
+          loading: 'מוסיף תינוק...',
+          success: 'תינוק נוסף בהצלחה!',
+          error: 'שגיאה בהוספה',
+        }
+      );
       const newBaby = {
         id: docRef.id,
         name: babyName,
@@ -211,7 +206,7 @@ const BabyTracker = () => {
       setSelectedBabyId(newBaby.id);
     } catch (err) {
       console.error('שגיאה בהוספת תינוק חדש:', err);
-      alert('שגיאה בהוספה');
+      toast.error('שגיאה בהוספה תינוק חדש');
     }
   };
 
