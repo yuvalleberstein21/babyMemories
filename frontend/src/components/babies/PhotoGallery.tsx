@@ -1,6 +1,6 @@
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import EditPhotoModal from './EditPhotoModal';
 
 interface Photo {
@@ -24,6 +24,7 @@ const PhotoGallery = ({
   onEditPhoto,
 }: PhotoGalleryProps) => {
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [filterDate, setFilterDate] = useState<string>('');
 
   const photoBeingEdited = photos.find((p) => p.id === editingPhotoId);
 
@@ -36,11 +37,42 @@ const PhotoGallery = ({
     }
   };
 
+  const filteredPhotos = useMemo(() => {
+    if (!filterDate) return photos;
+    return photos.filter((photo) =>
+      isSameDay(new Date(photo.photoDate), new Date(filterDate))
+    );
+  }, [photos, filterDate]);
+
   return (
-    <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6">
-      <h2 className="text-right text-xl font-semibold mb-6">גלריית התמונות</h2>
+    <div className="bg-white/80 backdrop-blur-sm shadow-xl rounded-2xl p-6 relative">
+      {/* סינון לפי תאריך */}
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-md pb-4 mb-4 rounded-xl">
+        <h2 className="text-right text-xl font-semibold mb-2">
+          גלריית התמונות
+        </h2>
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium">סנן לפי תאריך:</label>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="border rounded-lg px-3 py-1 text-right"
+          />
+          {filterDate && (
+            <button
+              onClick={() => setFilterDate('')}
+              className="text-blue-600 text-sm underline"
+            >
+              איפוס סינון
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* גלריה */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {photos.map((photo) => (
+        {filteredPhotos.map((photo) => (
           <div key={photo.id} className="relative group">
             <div className="aspect-square rounded-lg overflow-hidden shadow-lg transform transition-all duration-300 group-hover:scale-105">
               <img
@@ -55,7 +87,6 @@ const PhotoGallery = ({
                   </p>
                   <p className="font-semibold">תיאור: {photo.note}</p>
                 </div>
-                {/* כפתורי פעולה */}
                 <div className="absolute top-3 right-3 flex gap-2">
                   <button
                     onClick={() => setEditingPhotoId(photo.id)}
@@ -65,9 +96,7 @@ const PhotoGallery = ({
                     <Pencil size={18} />
                   </button>
                   <button
-                    onClick={() => {
-                      handleDelete(photo.id);
-                    }}
+                    onClick={() => handleDelete(photo.id)}
                     className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
                     title="מחק"
                   >
@@ -78,9 +107,13 @@ const PhotoGallery = ({
             </div>
           </div>
         ))}
+        {filteredPhotos.length === 0 && (
+          <p className="col-span-full text-center text-gray-500 mt-8">
+            לא נמצאו תמונות בתאריך הנבחר.
+          </p>
+        )}
       </div>
 
-      {/* מודאל עריכה */}
       {editingPhotoId && photoBeingEdited && (
         <EditPhotoModal
           isOpen={true}
