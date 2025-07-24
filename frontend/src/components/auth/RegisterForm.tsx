@@ -37,7 +37,7 @@ const RegisterForm = () => {
           <p className="text-gray-600">הרשמה ליומן התינוק שלך</p>
         </div>
 
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleRegister}>
           <div>
             <label
               htmlFor="fullName"
@@ -94,7 +94,6 @@ const RegisterForm = () => {
 
           <button
             type="submit"
-            onClick={handleRegister}
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-pink-400 to-purple-400 hover:from-pink-500 hover:to-purple-500 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
           >

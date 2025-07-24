@@ -7,7 +7,7 @@ interface Photo {
   id: string;
   imageUrl: string;
   note?: string;
-  photoDate?: string;
+  photoDate: string;
 }
 
 interface PhotoGalleryProps {
