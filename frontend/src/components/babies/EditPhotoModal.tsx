@@ -45,6 +45,7 @@ const EditPhotoModal = ({
             <input
               type="date"
               className="w-full border rounded px-3 py-2"
+              max={new Date().toISOString().slice(0, 10)}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />

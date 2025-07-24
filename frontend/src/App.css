@@ -7,7 +7,7 @@
 
 body {
   @apply bg-baby-gradient min-h-screen;
-  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+  font-family: 'Varela Round', sans-serif;
 }
 
 .loader-dots {

@@ -1,4 +1,3 @@
-// hooks/usePhotos.ts
 import { useEffect, useState } from 'react';
 import { auth, db } from '@/firebase';
 import {
@@ -11,9 +10,10 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { toast } from 'react-hot-toast';
+import { Photo } from '@/types/photo';
 
 export function usePhotos(selectedBabyId: string | null, isUploading: boolean) {
-  const [photos, setPhotos] = useState<any[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -33,10 +33,10 @@ export function usePhotos(selectedBabyId: string | null, isUploading: boolean) {
         );
         const q = query(photosRef, orderBy('photoDate', 'desc'));
         const snap = await getDocs(q);
-        const items = snap.docs.map((doc) => ({
+        const items: Photo[] = snap.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(),
-        })) as any[];
+          ...(doc.data() as Omit<Photo, 'id'>),
+        }));
 
         setPhotos(items);
       } catch (error) {
@@ -50,7 +50,7 @@ export function usePhotos(selectedBabyId: string | null, isUploading: boolean) {
     fetchPhotos();
   }, [selectedBabyId, isUploading]);
 
-  const handleDeletePhoto = async (photoId: string) => {
+  const handleDeletePhoto = async (photoId: string): Promise<void> => {
     const user = auth.currentUser;
     if (!user || !selectedBabyId) return;
 
@@ -70,7 +70,7 @@ export function usePhotos(selectedBabyId: string | null, isUploading: boolean) {
     photoId: string,
     newNote: string,
     newDate: string
-  ) => {
+  ): Promise<void> => {
     const user = auth.currentUser;
     if (!user || !selectedBabyId) return;
 

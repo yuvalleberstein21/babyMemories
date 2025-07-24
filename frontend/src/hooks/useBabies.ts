@@ -10,11 +10,10 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
+import { Baby } from '@/types/baby';
 
 export function useBabies() {
-  const [babies, setBabies] = useState<
-    { id: string; name: string; birthDate: string }[]
-  >([]);
+  const [babies, setBabies] = useState<Baby[]>([]);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -34,9 +33,9 @@ export function useBabies() {
           return;
         }
 
-        const babyList = snap.docs.map((doc) => ({
+        const babyList: Baby[] = snap.docs.map((doc) => ({
           id: doc.id,
-          ...(doc.data() as { name: string; birthDate: string }),
+          ...(doc.data() as Omit<Baby, 'id'>),
         }));
 
         setBabies(babyList);
@@ -58,12 +57,14 @@ export function useBabies() {
     }
 
     try {
+      const newBabyData: Omit<Baby, 'id'> = {
+        name: babyName,
+        birthDate,
+        createdAt: serverTimestamp() as any, // אם createdAt הוא Timestamp | string
+      };
+
       const docRef = await toast.promise(
-        addDoc(collection(db, 'users', user.uid, 'babies'), {
-          name: babyName,
-          birthDate,
-          createdAt: serverTimestamp(),
-        }),
+        addDoc(collection(db, 'users', user.uid, 'babies'), newBabyData),
         {
           loading: 'מוסיף תינוק...',
           success: 'תינוק נוסף בהצלחה!',
@@ -71,7 +72,7 @@ export function useBabies() {
         }
       );
 
-      const newBaby = { id: docRef.id, name: babyName, birthDate };
+      const newBaby: Baby = { id: docRef.id, ...newBabyData };
       setBabies((prev) => [...prev, newBaby]);
       setSelectedBabyId(newBaby.id);
     } catch (err) {

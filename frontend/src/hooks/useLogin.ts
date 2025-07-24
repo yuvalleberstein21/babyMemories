@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { login } from '@/services/AuthService';
 import { firebaseAuthErrors } from '@/utils/firebaseErrors';
+import { FirebaseError } from 'firebase/app';
 
 export const useLogin = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -17,13 +18,15 @@ export const useLogin = () => {
     try {
       const userCredential = await login(email, password);
       const user = userCredential.user;
+
       if (user) {
         const name = user.displayName || 'משתמש';
         toast.success(`ברוך הבא, ${name} 👋`);
         navigate('/baby-setup');
       }
-    } catch (err: any) {
-      const message = firebaseAuthErrors[err.code] || 'אירעה שגיאה, נסה שוב';
+    } catch (err: unknown) {
+      const error = err as FirebaseError;
+      const message = firebaseAuthErrors[error.code] || 'אירעה שגיאה, נסה שוב';
       toast.error(message);
     } finally {
       setIsLoading(false);

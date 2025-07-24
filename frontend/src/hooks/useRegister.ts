@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { register } from '@/services/AuthService';
 import { firebaseAuthErrors } from '@/utils/firebaseErrors';
+import { User } from 'firebase/auth';
 
 export const useRegister = () => {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [fullName, setFullName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -16,7 +17,7 @@ export const useRegister = () => {
     setIsLoading(true);
 
     try {
-      const user = await register(email, password, fullName);
+      const user: User | null = await register(email, password, fullName);
       if (user) {
         toast.success('נרשמת בהצלחה!');
         navigate('/');
