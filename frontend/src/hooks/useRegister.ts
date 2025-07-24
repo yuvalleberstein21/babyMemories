@@ -4,7 +4,6 @@ import toast from 'react-hot-toast';
 import { register } from '@/services/AuthService';
 import { firebaseAuthErrors } from '@/utils/firebaseErrors';
 import { User } from 'firebase/auth';
-import { NewUser } from '@/types/user';
 
 export const useRegister = () => {
   const [fullName, setFullName] = useState<string>('');
