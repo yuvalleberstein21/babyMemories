@@ -11,7 +11,7 @@ import PhotoUploadForm from './PhotoUploadForm';
 import PhotoGallery from './PhotoGallery';
 import MonthlyReminder from './MonthlyReminder';
 
-const MAX_SIZE_MB = 1.5;
+const MAX_SIZE_MB = 2.5;
 
 const BabyTracker = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -47,7 +47,7 @@ const BabyTracker = () => {
     }
 
     if (!isSizeValid) {
-      toast.error('התמונה חורגת מהמגבלה של MB 1.5');
+      toast.error('התמונה חורגת מהמגבלה של MB 2.5');
       return;
     }
 
