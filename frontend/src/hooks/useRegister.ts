@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { register } from '@/services/AuthService';
 import { firebaseAuthErrors } from '@/utils/firebaseErrors';
 import { User } from 'firebase/auth';
+import { NewUser } from '@/types/user';
 
 export const useRegister = () => {
   const [fullName, setFullName] = useState<string>('');
@@ -17,7 +18,7 @@ export const useRegister = () => {
     setIsLoading(true);
 
     try {
-      const user: User | null = await register(email, password, fullName);
+      const user: User = await register(fullName, email, password);
       if (user) {
         toast.success('נרשמת בהצלחה!');
         navigate('/');

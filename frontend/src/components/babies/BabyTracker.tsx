@@ -1,13 +1,10 @@
 import { useState } from 'react';
-
 import { toast } from 'react-hot-toast';
 import { auth, db } from '@/firebase';
 import { uploadToCloudinary } from '@/utils/CloudinaryUpload';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
-
 import { useBabies } from '@/hooks/useBabies';
 import { usePhotos } from '@/hooks/usePhotos';
-
 import { Loader } from '../ui/Loader';
 import BabySelector from './BabySelector';
 import PhotoUploadForm from './PhotoUploadForm';
@@ -118,7 +115,10 @@ const BabyTracker = () => {
 
       <div className="grid md:grid-cols-2 gap-8 mb-8">
         <div className="text-center mb-8">
-          <MonthlyReminder babyName={selectedBaby.name} />
+          <MonthlyReminder
+            babyName={selectedBaby.name}
+            babyId={selectedBaby.id}
+          />
         </div>
         <PhotoUploadForm
           imageFile={imageFile}

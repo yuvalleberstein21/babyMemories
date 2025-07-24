@@ -1,10 +1,7 @@
 export interface Reminder {
-  id?: string;
+  id: string;
   babyId: string;
-  userId: string;
-  month: number; // 1-12
-  year: number; // YYYY
-  sentAt?: string; // ISO string – תאריך השליחה בפועל
-  method: 'email' | 'in-app';
-  status: 'pending' | 'sent' | 'failed';
+  lastReminderDate: string; // תאריך בפורמט ISO
+  nextReminderDate?: string; // אופציונלי – תאריך עתידי
+  createdAt?: Date;
 }

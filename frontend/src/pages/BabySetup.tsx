@@ -1,6 +1,7 @@
 import BabySetupForm from '@/components/babies/BabySetupForm';
 import { Loader } from '@/components/ui/Loader';
 import { auth, db } from '@/firebase';
+import { NewBaby } from '@/types/baby';
 import {
   addDoc,
   collection,
@@ -12,9 +13,9 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 const BabySetup = () => {
-  const [babyName, setBabyName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [checking, setChecking] = useState(true);
+  const [babyName, setBabyName] = useState<string>('');
+  const [birthDate, setBirthDate] = useState<string>('');
+  const [checking, setChecking] = useState<boolean>(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -49,11 +50,13 @@ const BabySetup = () => {
     }
 
     try {
-      await addDoc(collection(db, 'users', user.uid, 'babies'), {
+      const newBaby: NewBaby = {
         name: babyName,
         birthDate,
-        createdAt: serverTimestamp(),
-      });
+        createdAt: serverTimestamp() as any,
+      };
+
+      await addDoc(collection(db, 'users', user.uid, 'babies'), newBaby);
       navigate('/baby-tracker');
     } catch (err) {
       console.error('שגיאה בשמירה', err);

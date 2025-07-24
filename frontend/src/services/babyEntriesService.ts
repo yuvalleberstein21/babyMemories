@@ -14,7 +14,7 @@ export const addBabyEntry = async ({
   imageUrl: string;
   month: number;
   note?: string;
-  photoDate: string; // תאריך בפורמט YYYY-MM-DD
+  photoDate: string;
 }) => {
   const docRef = await addDoc(
     collection(db, 'users', userId, 'babies', babyId, 'photos'),
